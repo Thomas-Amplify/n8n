@@ -1,0 +1,58 @@
+services:
+  # 1. Build the base n8nio/base:20 image (Debian-based)
+  base-builder:
+    build:
+      context: docker/images/n8n-base
+      dockerfile: Dockerfile
+      args:
+        NODE_VERSION: "20"
+    image: n8nio/base:20
+    profiles:
+      - build-only
+
+  # 2. Build the n8n image (without Python)
+  n8n-builder:
+    build:
+      context: docker/images/n8n
+      dockerfile: Dockerfile
+      args:
+        NODE_VERSION: "20"
+        N8N_VERSION: "1.91.0"
+        LAUNCHER_VERSION: "1.1.2"
+    image: n8nio/n8n:debian
+    depends_on:
+      - base-builder
+    profiles:
+      - build-only
+
+  # 3. Build and run the Python-enabled n8n image
+  n8n:
+    build:
+      context: .
+      dockerfile: docker/images/n8n-python/Dockerfile
+    image: n8nio/n8n-python:debian
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    environment:
+      N8N_HOST: "0.0.0.0"
+      N8N_PORT: "5678"
+      N8N_COMMUNITY_PACKAGES_ENABLED: "true"
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_USER: admin
+      N8N_BASIC_AUTH_PASSWORD: admin
+      N8N_USER_MANAGEMENT_DISABLED: "true"
+
+      WEAVIATE_API_KEY: "1vQBtbszfS3qyVrKFJEPOaGIXtg62cgGtJ82"
+      WEAVIATE_HOST: "pi7hndbiqfodpwdw11pjva.c0.europe-west3.gcp.weaviate.cloud"
+      WEAVIATE_HTTP_PORT: "8080"
+      WEAVIATE_GRPC_PORT: "50051"
+      USER_COLLECTION_NAME: "UserDocuments"
+      OLLAMA_HOST: "http://host.docker.internal:11434"
+      OLLAMA_MODEL_NAME: "qwen2.5:0.5b"
+      EMBEDDINGS_MODEL_NAME: "bge-m3"
+
+volumes:
+  n8n_data:
+    name: n8n_data

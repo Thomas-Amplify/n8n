@@ -25,23 +25,26 @@ RUN set -eux; \
 # Setup the Task Runner Launcher
 ARG TARGETPLATFORM
 ARG LAUNCHER_VERSION=1.1.2
-COPY n8n-task-runners.json /etc/n8n-task-runners.json
+# Copy task runner configuration
+COPY docker/images/n8n/n8n-task-runners.json /etc/n8n-task-runners.json
 # Download, verify, then extract the launcher binary
-RUN \
-	if [[ "$TARGETPLATFORM" = "linux/amd64" ]]; then export ARCH_NAME="amd64"; \
-	elif [[ "$TARGETPLATFORM" = "linux/arm64" ]]; then export ARCH_NAME="arm64"; fi; \
-	mkdir /launcher-temp && \
-	cd /launcher-temp && \
-	wget https://github.com/n8n-io/task-runner-launcher/releases/download/${LAUNCHER_VERSION}/task-runner-launcher-${LAUNCHER_VERSION}-linux-${ARCH_NAME}.tar.gz && \
-	wget https://github.com/n8n-io/task-runner-launcher/releases/download/${LAUNCHER_VERSION}/task-runner-launcher-${LAUNCHER_VERSION}-linux-${ARCH_NAME}.tar.gz.sha256 && \
-	# The .sha256 does not contain the filename --> Form the correct checksum file
-	echo "$(cat task-runner-launcher-${LAUNCHER_VERSION}-linux-${ARCH_NAME}.tar.gz.sha256) task-runner-launcher-${LAUNCHER_VERSION}-linux-${ARCH_NAME}.tar.gz" > checksum.sha256 && \
-	sha256sum -c checksum.sha256 && \
-	tar xvf task-runner-launcher-${LAUNCHER_VERSION}-linux-${ARCH_NAME}.tar.gz --directory=/usr/local/bin && \
-	cd - && \
-	rm -r /launcher-temp
+# Download, verify, then extract the launcher binary
+RUN set -eux; \
+    if [ "$TARGETPLATFORM" = "linux/amd64" ]; then ARCH_NAME=amd64; \
+    elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then ARCH_NAME=arm64; \
+    else echo "Unsupported target platform: $TARGETPLATFORM"; exit 1; fi; \
+    mkdir /launcher-temp; \
+    cd /launcher-temp; \
+    wget https://github.com/n8n-io/task-runner-launcher/releases/download/${LAUNCHER_VERSION}/task-runner-launcher-${LAUNCHER_VERSION}-linux-${ARCH_NAME}.tar.gz; \
+    wget https://github.com/n8n-io/task-runner-launcher/releases/download/${LAUNCHER_VERSION}/task-runner-launcher-${LAUNCHER_VERSION}-linux-${ARCH_NAME}.tar.gz.sha256; \
+    echo "$(cat task-runner-launcher-${LAUNCHER_VERSION}-linux-${ARCH_NAME}.tar.gz.sha256) task-runner-launcher-${LAUNCHER_VERSION}-linux-${ARCH_NAME}.tar.gz" > checksum.sha256; \
+    sha256sum -c checksum.sha256; \
+    tar xvf task-runner-launcher-${LAUNCHER_VERSION}-linux-${ARCH_NAME}.tar.gz --directory=/usr/local/bin; \
+    cd -; \
+    rm -rf /launcher-temp
 
-COPY docker-entrypoint.sh /
+# Copy entrypoint script
+COPY docker/images/n8n/docker-entrypoint.sh /
 
 RUN \
 	mkdir .n8n && \
